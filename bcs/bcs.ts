@@ -15,23 +15,66 @@ import {
  * Similar to ./simple_transfer.ts, but uses transferCoinTransaction to generate the transaction.
  */
 
-class Struct extends Serializable {
-    constructor(readonly str: string, readonly num: number, readonly option: number | null) {
+/**
+ * This is because MoveOption is very tied to entry function argument
+ */
+class EasyOption<T extends Serializable> extends Serializable {
+
+    constructor(readonly option: T | null) {
         super();
+    }
+
+    serialize(serializer: Serializer) {
+        if (this.option === null) {
+            serializer.serializeBool(false);
+        } else {
+            serializer.serializeBool(true);
+            serializer.serialize(this.option)
+        }
+    }
+}
+
+class ComplexStruct extends Serializable {
+    readonly structs: Struct[];
+    readonly enums: Enum[];
+
+    constructor(structs: Struct[], enums: Enum[]) {
+        super();
+        this.structs = structs;
+        this.enums = enums;
+    }
+
+    serialize(serializer: Serializer) {
+        serializer.serializeVector(this.structs);
+        serializer.serializeVector(this.enums);
+    }
+}
+
+class Struct extends Serializable {
+    readonly str: string;
+    readonly num: number;
+    readonly option: MoveOption<U32>
+
+    constructor(str: string, num: number, option: number | null) {
+        super();
+        this.str = str;
+        this.num = num;
+        this.option = MoveOption.U32(option);
     }
 
     serialize(serializer: Serializer): void {
         serializer.serializeStr(this.str);
         serializer.serializeU32(this.num);
-        const option = MoveOption.U32(this.option);
-        serializer.serialize(option);
+        serializer.serialize(this.option);
     }
 }
 
 enum EnumType {
     U32 = 0,
     String = 1,
+    U64 = 2,
 }
+
 class Enum extends Serializable {
 
     constructor(readonly type: number, readonly data: number | string) {
@@ -47,6 +90,8 @@ class Enum extends Serializable {
                     throw Error("Not properly typed, should be string")
                 }
                 break;
+            case EnumType.U64:
+                break;
             default:
                 throw new Error("Unsupported type");
         }
@@ -59,10 +104,19 @@ class Enum extends Serializable {
         // Then serialize the type associated
         switch (this.type) {
             case EnumType.U32:
-                serializer.serializeU32(this.data as number);
+                if (typeof this.data !== "number") {
+                    throw Error("Not properly typed, should be number")
+                }
+                serializer.serializeU32(this.data);
                 break;
             case EnumType.String:
-                serializer.serializeStr(this.data as string);
+                if (typeof this.data !== "string") {
+                    throw Error("Not properly typed, should be string")
+                }
+                serializer.serializeStr(this.data);
+                break;
+            case EnumType.U64:
+                serializer.serializeU64(BigInt(this.data));
                 break;
             default:
                 throw new Error("Unsupported type");
@@ -145,6 +199,12 @@ function serializeString(str: string): Hex {
 function serialize<T extends Serializable>(struct: T): Hex {
     const serializer = new Serializer();
     struct.serialize(serializer);
+    return new Hex(serializer.toUint8Array());
+}
+
+function serializeVector<T extends Serializable>(inputs: T[]): Hex {
+    const serializer = new Serializer();
+    serializer.serializeVector(inputs)
     return new Hex(serializer.toUint8Array());
 }
 
@@ -260,6 +320,30 @@ const example = async () => {
     ].forEach((input) => {
         console.log(`${JSON.stringify(input)}:\t${serialize(input)}`)
     });
+
+    console.log("-----------------");
+    console.log("Serialize complex struct");
+    [
+        new ComplexStruct([new Struct("A", 1, 99), new Struct("B", 2, 128)], [new Enum(EnumType.U32, 20), new Enum(EnumType.U64, "18446744073709551615"), new Enum(EnumType.String, "hello")]),
+        new ComplexStruct([new Struct("A", 1, 99), new Struct("B", 2, 128)], []),
+        new ComplexStruct([], []),
+    ].forEach((input) => {
+        console.log(`${JSON.stringify(input)}:\t${serialize(input)}`)
+    });
+
+
+    console.log("-----------------");
+    console.log("Serialize all kinds of stuff");
+    const bigStuff = [
+        new EasyOption(
+            new ComplexStruct([new Struct("A", 1, 99), new Struct("B", 2, 128)], [new Enum(EnumType.U32, 20), new Enum(EnumType.U64, "18446744073709551615"), new Enum(EnumType.String, "hello")])
+        ),
+        new EasyOption(new ComplexStruct([new Struct("A", 1, 99), new Struct("B", 2, 128)], [])),
+        new EasyOption(new ComplexStruct([], [])),
+        new EasyOption<ComplexStruct>(null)
+    ];
+
+    console.log(`${JSON.stringify(bigStuff)}:\t ${serializeVector(bigStuff)}`);
 };
 
 example();
@@ -348,11 +432,19 @@ Serialize uleb32
 65535:  ffff03
 -----------------
 Serialize struct
-{"str":"With option","num":1,"option":1}:       0x0b57697468206f7074696f6e010000000101000000
-{"str":"Without option","num":2,"option":null}: 0x0e576974686f7574206f7074696f6e0200000000
+{"str":"With option","num":1,"option":{"vec":{"values":[{"value":1}]},"value":{"value":1}}}:    0x0b57697468206f7074696f6e010000000101000000
+{"str":"Without option","num":2,"option":{"vec":{"values":[]}}}:        0x0e576974686f7574206f7074696f6e0200000000
 -----------------
 Serialize enum
 {"type":0,"data":22}:   0x0000000016000000
 {"type":1,"data":"Hello from space"}:   0x010000001048656c6c6f2066726f6d207370616365
+-----------------
+Serialize complex struct
+{"structs":[{"str":"A","num":1,"option":{"vec":{"values":[{"value":99}]},"value":{"value":99}}},{"str":"B","num":2,"option":{"vec":{"values":[{"value":128}]},"value":{"value":128}}}],"enums":[{"type":0,"data":20},{"type":2,"data":"18446744073709551615"},{"type":1,"data":"hello"}]}:      0x020141010000000163000000014202000000018000000003000000001400000002000000ffffffffffffffff010000000568656c6c6f
+{"structs":[{"str":"A","num":1,"option":{"vec":{"values":[{"value":99}]},"value":{"value":99}}},{"str":"B","num":2,"option":{"vec":{"values":[{"value":128}]},"value":{"value":128}}}],"enums":[]}:     0x020141010000000163000000014202000000018000000000
+{"structs":[],"enums":[]}:      0x0000
+-----------------
+Serialize all kinds of stuff
+[{"option":{"structs":[{"str":"A","num":1,"option":{"vec":{"values":[{"value":99}]},"value":{"value":99}}},{"str":"B","num":2,"option":{"vec":{"values":[{"value":128}]},"value":{"value":128}}}],"enums":[{"type":0,"data":20},{"type":2,"data":"18446744073709551615"},{"type":1,"data":"hello"}]}},{"option":{"structs":[{"str":"A","num":1,"option":{"vec":{"values":[{"value":99}]},"value":{"value":99}}},{"str":"B","num":2,"option":{"vec":{"values":[{"value":128}]},"value":{"value":128}}}],"enums":[]}},{"option":{"structs":[],"enums":[]}},{"option":null}]:     0x0401020141010000000163000000014202000000018000000003000000001400000002000000ffffffffffffffff010000000568656c6c6f0102014101000000016300000001420200000001800000000001000000
 
  */
