@@ -263,3 +263,96 @@ const example = async () => {
 };
 
 example();
+
+/* Output
+
+-----------------
+Serialize u8
+0:      00
+1:      01
+255:    ff
+-----------------
+Serialize u16
+0:      0000
+1:      0100
+255:    ff00
+65535:  ffff
+-----------------
+Serialize u32
+0:      00000000
+1:      01000000
+255:    ff000000
+4294967295:     ffffffff
+-----------------
+Serialize u64
+0:      0000000000000000
+1:      0100000000000000
+255:    ff00000000000000
+65535:  ffff000000000000
+18446744073709551615:   ffffffffffffffff
+-----------------
+Serialize u128
+0:      00000000000000000000000000000000
+1:      01000000000000000000000000000000
+255:    ff000000000000000000000000000000
+65535:  ffff0000000000000000000000000000
+340282366920938463463374607431768211455:        ffffffffffffffffffffffffffffffff
+-----------------
+Serialize u256
+0:      0000000000000000000000000000000000000000000000000000000000000000
+1:      0100000000000000000000000000000000000000000000000000000000000000
+255:    ff00000000000000000000000000000000000000000000000000000000000000
+65535:  ffff000000000000000000000000000000000000000000000000000000000000
+115792089237316195423570985008687907853269984665640564039457584007913129639935: ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+-----------------
+Serialize bool
+false:  00
+true:   01
+-----------------
+Serialize address
+0x1:    0000000000000000000000000000000000000000000000000000000000000001
+0x2:    0000000000000000000000000000000000000000000000000000000000000002
+0xDEADFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:     deadffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:     ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+-----------------
+Serialize string
+abcd:   0461626364
+hello:  0568656c6c6f
+-----------------
+Serialize bytes
+0x123456:       03123456
+0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:     2cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+-----------------
+Serialize fixed bytes
+0x123456:       123456
+0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:     ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+-----------------
+Serialize uleb32
+0:      00
+1:      01
+2:      02
+3:      03
+7:      07
+15:     0f
+31:     1f
+63:     3f
+127:    7f
+255:    ff01
+511:    ff03
+1023:   ff07
+2047:   ff0f
+4095:   ff1f
+8191:   ff3f
+16383:  ff7f
+32767:  ffff01
+65535:  ffff03
+-----------------
+Serialize struct
+{"str":"With option","num":1,"option":1}:       0x0b57697468206f7074696f6e010000000101000000
+{"str":"Without option","num":2,"option":null}: 0x0e576974686f7574206f7074696f6e0200000000
+-----------------
+Serialize enum
+{"type":0,"data":22}:   0x0000000016000000
+{"type":1,"data":"Hello from space"}:   0x010000001048656c6c6f2066726f6d207370616365
+
+ */
