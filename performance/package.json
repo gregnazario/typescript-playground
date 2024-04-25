@@ -1,0 +1,23 @@
+{
+  "name": "ts-test",
+  "private": "true",
+  "version": "1.0.0",
+  "description": "",
+  "main": "simple_transfer.ts",
+  "scripts": {
+    "dev": "ts-node main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aptos-labs/ts-sdk": "1.13.1"
+  },
+  "peerDependencies": {
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "ts-node": "latest",
+    "typescript": "latest"
+  }
+}
